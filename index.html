@@ -28,10 +28,13 @@ input::placeholder, textarea::placeholder { color: #0ff; opacity: 0.7; }
   <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded hover:brightness-125 transition text-lg ml-2">Undo</button>
 </div>
 
-<!-- Beat Upload with Styled Button -->
+<!-- Beat Upload -->
 <div class="flex flex-col items-center mb-8 w-full max-w-3xl">
-  <button id="chooseBeatBtn" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition mb-3">Choose Beat</button>
-  <input type="file" id="beatUpload" accept="audio/*" class="hidden"/>
+  <label for="beatUpload" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition cursor-pointer text-lg mb-2 text-center">
+    Choose Beat
+  </label>
+  <input type="file" id="beatUpload" accept="audio/*" 
+         class="hidden"/>
   <audio id="beatPlayer" controls class="mt-2 w-full max-w-xl h-12 rounded border-2 border-neon-blue p-1 hidden"></audio>
 </div>
 
@@ -50,14 +53,8 @@ const generateBtn = document.getElementById('generateBtn');
 const undoBtn = document.getElementById('undoBtn');
 const lyricsArea = document.getElementById('lyricsArea');
 const saveBtn = document.getElementById('saveBtn');
-const chooseBeatBtn = document.getElementById('chooseBeatBtn');
 const beatUpload = document.getElementById('beatUpload');
 const beatPlayer = document.getElementById('beatPlayer');
-
-// Open file selector when button is clicked
-chooseBeatBtn.addEventListener('click', () => {
-  beatUpload.click();
-});
 
 // Handle Beat Upload
 beatUpload.addEventListener('change', () => {
@@ -85,10 +82,7 @@ generateBtn.addEventListener('click', async () => {
       return;
     }
 
-    // Pick one rhyme randomly
     const rhyme = data[Math.floor(Math.random() * data.length)].word;
-
-    // Append the rhyming word on a new line
     lyricsArea.value += `\n${rhyme}`;
 
   } catch(err){
@@ -101,7 +95,7 @@ generateBtn.addEventListener('click', async () => {
 undoBtn.addEventListener('click', () => {
   const lines = lyricsArea.value.split('\n');
   if(lines.length > 0){
-    lines.pop(); // Remove last line
+    lines.pop();
     lyricsArea.value = lines.join('\n');
   }
 });
