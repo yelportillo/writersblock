@@ -30,11 +30,9 @@ input::placeholder, textarea::placeholder { color: #0ff; opacity: 0.7; }
 
 <!-- Beat Upload -->
 <div class="flex flex-col items-center mb-8 w-full max-w-3xl">
-  <label for="beatUpload" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition cursor-pointer text-lg mb-2 text-center">
-    Choose Beat
-  </label>
-  <input type="file" id="beatUpload" accept="audio/*" 
-         class="hidden"/>
+  <input type="file" id="beatUpload"
+         class="w-full p-4 rounded border-2 border-neon-blue text-neon-blue cursor-pointer text-lg"
+         accept="audio/*"/>
   <audio id="beatPlayer" controls class="mt-2 w-full max-w-xl h-12 rounded border-2 border-neon-blue p-1 hidden"></audio>
 </div>
 
