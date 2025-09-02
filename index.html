@@ -93,17 +93,6 @@ textarea, input {
 
 <h1 class="text-6xl font-extrabold mb-10 text-neon-3d">Writer's Block</h1>
 
-<!-- Input Section -->
-<div class="flex flex-col md:flex-row gap-4 mb-4 w-full max-w-3xl">
-  <input id="inputLine" type="text" placeholder="Enter a word or phrase..."
-    class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
-  <button id="generateBtn" class="bg-neon-blue text-black px-6 py-3 rounded text-lg">Generate</button>
-  <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
-</div>
-
-<!-- Rhyme Buttons Container -->
-<div id="rhymeContainer" class="flex flex-wrap gap-3 mb-4 w-full max-w-3xl"></div>
-
 <!-- Beat Upload Section -->
 <div id="beatDropArea">
   <p class="text-lg">Drag & Drop a beat here or click "Choose Beat"</p>
@@ -115,12 +104,23 @@ textarea, input {
 <div id="beatPlayerBox" class="flex flex-col items-center w-full max-w-3xl p-4 border-2 border-neon-blue rounded bg-gray-800 text-neon-blue hidden mb-8 mt-4">
   <p class="mb-2">Now Playing:</p>
   <audio id="beatPlayer" controls class="w-full h-12 rounded"></audio>
-  <!-- Combined visualizer canvas -->
   <canvas id="beatVisualizer" class="w-full mt-4 rounded bg-gray-900"></canvas>
 </div>
 
 <!-- Editable Lyrics Workspace -->
 <h2 class="text-2xl font-bold text-neon-blue mb-3 mt-4">Lyrics</h2>
+
+<!-- Input Section: Above Lyrics -->
+<div class="flex flex-col md:flex-row gap-4 mb-2 w-full max-w-3xl">
+  <input id="inputLine" type="text" placeholder="Enter a word or phrase..."
+    class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
+  <button id="generateBtn" class="bg-neon-blue text-black px-6 py-3 rounded text-lg">Generate</button>
+  <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
+</div>
+
+<!-- Rhyme Buttons: Directly below Input -->
+<div id="rhymeContainer" class="flex flex-wrap gap-3 mb-4 w-full max-w-3xl"></div>
+
 <textarea id="lyricsArea"
   class="w-full max-w-3xl h-64 p-4 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg resize-y"
   placeholder="Your lyrics go here..."></textarea>
