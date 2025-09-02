@@ -51,7 +51,7 @@ textarea, input {
   border-radius: 12px;
   padding: 48px;
   width: 100%;
-  max-width: 768px; /* same as lyrics area max width */
+  max-width: 768px;
   background-color: #111;
   color: var(--neon-blue);
   text-align: center;
@@ -115,6 +115,8 @@ textarea, input {
 <div id="beatPlayerBox" class="flex flex-col items-center w-full max-w-3xl p-4 border-2 border-neon-blue rounded bg-gray-800 text-neon-blue hidden mb-8 mt-4">
   <p class="mb-2">Now Playing:</p>
   <audio id="beatPlayer" controls class="w-full h-12 rounded"></audio>
+  <!-- Combined visualizer canvas -->
+  <canvas id="beatVisualizer" class="w-full mt-4 rounded bg-gray-900"></canvas>
 </div>
 
 <!-- Editable Lyrics Workspace -->
@@ -143,17 +145,9 @@ let historyStack = [];
 
 // --- Beat Upload Drag & Drop ---
 chooseBeatBtn.addEventListener('click', () => beatUpload.click());
-
 beatUpload.addEventListener('change', handleBeatFile);
-
-beatDropArea.addEventListener('dragover', e => {
-  e.preventDefault();
-  beatDropArea.classList.add('dragover');
-});
-beatDropArea.addEventListener('dragleave', e => {
-  e.preventDefault();
-  beatDropArea.classList.remove('dragover');
-});
+beatDropArea.addEventListener('dragover', e => { e.preventDefault(); beatDropArea.classList.add('dragover'); });
+beatDropArea.addEventListener('dragleave', e => { e.preventDefault(); beatDropArea.classList.remove('dragover'); });
 beatDropArea.addEventListener('drop', e => {
   e.preventDefault();
   beatDropArea.classList.remove('dragover');
@@ -162,7 +156,6 @@ beatDropArea.addEventListener('drop', e => {
     handleBeatFile();
   }
 });
-
 function handleBeatFile(){
   const file = beatUpload.files[0];
   if(!file) return;
@@ -241,6 +234,86 @@ saveBtn.addEventListener('click',()=>{
   a.download='lyrics.txt';
   a.click();
 });
+
+// --- Neon Beat Visualizer ---
+let audioContext, analyser, source, freqDataArray, timeDataArray, bufferLength;
+const canvas = document.getElementById('beatVisualizer');
+const ctx = canvas.getContext('2d');
+
+beatPlayer.addEventListener('play', () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    source = audioContext.createMediaElementSource(beatPlayer);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+    analyser.fftSize = 2048;
+    bufferLength = analyser.frequencyBinCount;
+
+    freqDataArray = new Uint8Array(bufferLength);
+    timeDataArray = new Uint8Array(bufferLength);
+  }
+  drawCombinedVisualizer();
+});
+
+function drawCombinedVisualizer() {
+  if (beatPlayer.paused) return;
+  requestAnimationFrame(drawCombinedVisualizer);
+
+  analyser.getByteFrequencyData(freqDataArray);
+  analyser.getByteTimeDomainData(timeDataArray);
+
+  canvas.width = canvas.clientWidth;
+  canvas.height = 150;
+
+  // Average frequency for neon intensity
+  const avgFreq = freqDataArray.reduce((a,b)=>a+b,0)/freqDataArray.length;
+  const neonIntensity = Math.min(1, avgFreq / 200);
+  const neonColor = `rgba(0, ${255 * neonIntensity}, 255, 1)`;
+
+  // Background pulse effect
+  const pulseAlpha = 0.08 + neonIntensity * 0.12;
+  ctx.fillStyle = `rgba(0, 255, 255, ${pulseAlpha})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Neon gradient for bars
+  const neonGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  neonGradient.addColorStop(0, neonColor);
+  neonGradient.addColorStop(0.5, `rgba(0, ${150 * neonIntensity}, 255, 0.6)`);
+  neonGradient.addColorStop(1, `rgba(0, ${85 * neonIntensity}, 85, 0.2)`);
+
+  // Draw pulsing bars
+  const barWidth = (canvas.width / bufferLength) * 2;
+  let x = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    const barHeight = freqDataArray[i] * 0.8;
+    ctx.fillStyle = neonGradient;
+    ctx.shadowColor = neonColor;
+    ctx.shadowBlur = 15;
+    const pulseHeight = i < 5 ? barHeight * 1.5 : barHeight;
+    ctx.fillRect(x, canvas.height - pulseHeight / 2, barWidth, pulseHeight / 2);
+    x += barWidth + 1;
+  }
+
+  // Draw scrolling waveform
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = neonColor;
+  ctx.shadowColor = neonColor;
+  ctx.shadowBlur = 20;
+  ctx.beginPath();
+  const sliceWidth = canvas.width / bufferLength;
+  let sx = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    const v = timeDataArray[i] / 128.0;
+    const y = v * canvas.height / 2;
+    if (i === 0) ctx.moveTo(sx, y);
+    else ctx.lineTo(sx, y);
+    sx += sliceWidth;
+  }
+  ctx.lineTo(canvas.width, canvas.height / 2);
+  ctx.stroke();
+}
 </script>
 
 </body>
