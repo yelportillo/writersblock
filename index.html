@@ -67,7 +67,7 @@ textarea, input {
 
 <!-- Input Section -->
 <div class="flex flex-col md:flex-row gap-4 mb-4 w-full max-w-3xl">
-  <input id="inputLine" type="text" placeholder="Enter a word or line..."
+  <input id="inputLine" type="text" placeholder="Enter a word or phrase..."
     class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
   <button id="generateBtn" class="bg-neon-blue text-black px-6 py-3 rounded text-lg">Generate</button>
   <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
@@ -135,36 +135,48 @@ function handleBeatFile(){
 // --- Append lyrics ---
 function appendLyrics(line){ historyStack.push(lyricsArea.value); lyricsArea.value += lyricsArea.value ? '\n' + line : line; lyricsArea.scrollTop = lyricsArea.scrollHeight; }
 
-// --- Generate rhymes ---
-async function generateRhyme(){
-  const line = inputLine.value.trim();
-  if(!line) return;
-  const lastWord = line.split(' ').pop();
+// --- Generate multi-word rhymes ---
+async function generateRhyme() {
+  const phrase = inputLine.value.trim();
+  if (!phrase) return;
+
+  const words = phrase.split(' ');
+  const lastWord = words[words.length - 1];
+  const firstPart = words.slice(0, -1).join(' ');
 
   try {
-    const res = await fetch(`https://api.datamuse.com/words?rel_rhy=${lastWord}&max=5`);
+    const res = await fetch(`https://api.datamuse.com/words?rel_rhy=${lastWord}&max=10`);
     const data = await res.json();
     rhymeContainer.innerHTML = '';
-    if(data.length === 0){ appendLyrics(`(No rhymes found for '${lastWord}')`); inputLine.value = ''; return; }
+
+    if (data.length === 0) {
+      appendLyrics(`(No rhymes found for '${lastWord}')`);
+      inputLine.value = '';
+      return;
+    }
 
     data.forEach(item => {
+      const rhymePhrase = firstPart ? `${firstPart} ${item.word}` : item.word;
       const btn = document.createElement('button');
       btn.className = 'rhyme-btn';
-      btn.textContent = item.word;
-      btn.addEventListener('click', ()=>{
+      btn.textContent = rhymePhrase;
+      btn.addEventListener('click', () => {
         const lines = lyricsArea.value.split('\n');
         lines.pop();
-        lines.push(item.word);
+        lines.push(rhymePhrase);
         lyricsArea.value = lines.join('\n');
       });
       rhymeContainer.appendChild(btn);
     });
 
-    // Append first rhyme automatically
-    appendLyrics(data[0].word);
+    const firstRhymePhrase = firstPart ? `${firstPart} ${data[0].word}` : data[0].word;
+    appendLyrics(firstRhymePhrase);
     inputLine.value='';
-
-  } catch(err){ console.error(err); appendLyrics('(Error generating rhyme)'); }
+    rhymeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(err) {
+    console.error(err);
+    appendLyrics('(Error generating rhyme)');
+  }
 }
 
 // --- Event Listeners ---
@@ -176,7 +188,7 @@ saveBtn.addEventListener('click',()=>{
   const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url;
+  a.href = url;
   a.download='lyrics.txt';
   a.click();
 });
