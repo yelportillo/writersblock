@@ -28,11 +28,10 @@ input::placeholder, textarea::placeholder { color: #0ff; opacity: 0.7; }
   <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded hover:brightness-125 transition text-lg ml-2">Undo</button>
 </div>
 
-<!-- Beat Upload -->
+<!-- Beat Upload with "Choose Beat" Button -->
 <div class="flex flex-col items-center mb-8 w-full max-w-3xl">
-  <input type="file" id="beatUpload"
-         class="w-full p-4 rounded border-2 border-neon-blue text-neon-blue cursor-pointer text-lg"
-         accept="audio/*"/>
+  <button id="chooseBeatBtn" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition mb-3">Choose Beat</button>
+  <input type="file" id="beatUpload" class="hidden"/>
   <audio id="beatPlayer" controls class="mt-2 w-full max-w-xl h-12 rounded border-2 border-neon-blue p-1 hidden"></audio>
 </div>
 
@@ -51,13 +50,24 @@ const generateBtn = document.getElementById('generateBtn');
 const undoBtn = document.getElementById('undoBtn');
 const lyricsArea = document.getElementById('lyricsArea');
 const saveBtn = document.getElementById('saveBtn');
+const chooseBeatBtn = document.getElementById('chooseBeatBtn');
 const beatUpload = document.getElementById('beatUpload');
 const beatPlayer = document.getElementById('beatPlayer');
 
-// Handle Beat Upload
+// Open file selector when button is clicked
+chooseBeatBtn.addEventListener('click', () => {
+  beatUpload.click();
+});
+
+// Handle Beat Upload with iOS-friendly type check
 beatUpload.addEventListener('change', () => {
   const file = beatUpload.files[0];
   if(file){
+    if(!file.type.startsWith('audio/')){
+      alert('Please select a valid audio file.');
+      beatUpload.value = '';
+      return;
+    }
     beatPlayer.src = URL.createObjectURL(file);
     beatPlayer.classList.remove('hidden');
   }
