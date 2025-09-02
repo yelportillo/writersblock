@@ -105,10 +105,7 @@ textarea, input {
   <canvas id="beatVisualizer" class="w-full mt-4 rounded bg-gray-900"></canvas>
 </div>
 
-<!-- Editable Lyrics Workspace -->
-<h2 class="text-2xl font-bold text-neon-blue mb-3 mt-4">Lyrics</h2>
-
-<!-- Input Section -->
+<!-- Input Section Above Lyrics -->
 <div class="flex flex-col md:flex-row gap-4 mb-2 w-full max-w-3xl">
   <input id="inputLine" type="text" placeholder="Enter a word or phrase..."
     class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
@@ -116,15 +113,16 @@ textarea, input {
   <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
 </div>
 
-<!-- Rhyme Buttons -->
+<!-- Rhyme Buttons Below Input -->
 <div id="rhymeContainer" class="flex flex-wrap gap-3 mb-4 w-full max-w-3xl"></div>
 
+<!-- Lyrics Textarea -->
 <textarea id="lyricsArea"
   class="w-full max-w-3xl h-64 p-4 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg resize-y"
   placeholder="Your lyrics go here..."></textarea>
 
 <!-- Save Lyrics -->
-<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded text-lg mt-6">Save</button>
+<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded text-lg mt-6">Save Lyrics</button>
 
 <script>
 const inputLine = document.getElementById('inputLine');
@@ -174,11 +172,10 @@ function shuffleArray(array) {
   return array;
 }
 
-// --- Generate fresh 10 rhymes each click ---
+// --- Generate rhymes ---
 async function generateRhyme() {
   const phrase = inputLine.value.trim();
   if (!phrase) return;
-
   const words = phrase.split(' ');
   const lastWord = words[words.length - 1];
 
@@ -209,7 +206,6 @@ async function generateRhyme() {
     });
 
     appendLyrics(data[0].word);
-    // Keep the input box text intact
     rhymeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (err) {
@@ -222,14 +218,36 @@ async function generateRhyme() {
 generateBtn.addEventListener('click', generateRhyme);
 inputLine.addEventListener('keypress', e => { if(e.key==='Enter') generateRhyme(); });
 undoBtn.addEventListener('click',()=>{ if(historyStack.length>0) lyricsArea.value=historyStack.pop(); });
-saveBtn.addEventListener('click',()=>{
+
+// --- Save Lyrics with destination choice ---
+saveBtn.addEventListener('click', async () => {
   const text = lyricsArea.value;
-  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download='lyrics.txt';
-  a.click();
+  const defaultFileName = 'lyrics.txt';
+  const fileName = prompt('Enter file name', defaultFileName) || defaultFileName;
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'Text Files', accept: { 'text/plain': ['.txt'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+      alert('Lyrics saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Save cancelled or failed');
+    }
+  } else {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 });
 
 // --- Neon Beat Visualizer ---
