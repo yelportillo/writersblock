@@ -3,12 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Writer's Block</title>
+<title>Writer's Block Studio</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 :root {
   --neon-blue: #0ff;
   --neon-dark: #055;
+}
+
+body {
+  background-color: #111;
+  color: white;
+  font-family: sans-serif;
 }
 
 .text-neon-blue { color: var(--neon-blue); }
@@ -21,20 +27,37 @@ input::placeholder, textarea::placeholder { color: var(--neon-blue); opacity: 0.
   text-shadow: 2px 2px 0 #08b, 4px 4px 0 #055, 6px 6px 0 #022;
 }
 
-button {
+button, .rhyme-btn {
   transition: all 0.2s ease-in-out;
+  font-weight: 700;
 }
-button:hover {
+
+button:hover, .rhyme-btn:hover {
   box-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
 }
 
-textarea, select {
+textarea, input {
   transition: all 0.2s ease-in-out;
 }
 
 #beatDropArea.dragover {
   border-color: var(--neon-blue);
   background-color: #111;
+}
+
+/* Rhyme buttons */
+.rhyme-btn {
+  background-color: var(--neon-blue);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-dark);
+}
+.rhyme-btn:hover {
+  background-color: #08b;
+  box-shadow: 0 0 15px var(--neon-blue), 0 0 25px var(--neon-dark);
 }
 </style>
 </head>
@@ -43,22 +66,20 @@ textarea, select {
 <h1 class="text-6xl font-extrabold mb-10 text-neon-3d">Writer's Block</h1>
 
 <!-- Input Section -->
-<div class="flex flex-col md:flex-row gap-4 mb-2 w-full max-w-3xl">
+<div class="flex flex-col md:flex-row gap-4 mb-4 w-full max-w-3xl">
   <input id="inputLine" type="text" placeholder="Enter a word or line..."
     class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
-  <button id="generateBtn" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition text-lg">Generate</button>
-  <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded hover:brightness-125 transition text-lg ml-2">Undo</button>
+  <button id="generateBtn" class="bg-neon-blue text-black px-6 py-3 rounded text-lg">Generate</button>
+  <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
 </div>
 
-<!-- Rhyme Options Dropdown -->
-<select id="rhymeDropdown" class="w-full md:w-1/3 p-2 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue text-lg hidden mb-4">
-  <option value="">Select a rhyme</option>
-</select>
+<!-- Rhyme Buttons Container -->
+<div id="rhymeContainer" class="flex flex-wrap gap-3 mb-4 w-full max-w-3xl"></div>
 
 <!-- Beat Upload Section -->
 <div id="beatDropArea" class="flex flex-col items-center mb-4 w-full max-w-3xl p-4 border-2 border-neon-blue rounded bg-gray-800 text-neon-blue">
   <p class="mb-2 text-center">Drag & Drop a beat here or click "Choose Beat"</p>
-  <button id="chooseBeatBtn" class="bg-neon-blue text-black px-6 py-3 rounded hover:brightness-125 transition">Choose Beat</button>
+  <button id="chooseBeatBtn" class="bg-neon-blue text-black px-6 py-3 rounded">Choose Beat</button>
   <input type="file" id="beatUpload" class="hidden"/>
 </div>
 
@@ -75,7 +96,7 @@ textarea, select {
   placeholder="Your lyrics go here..."></textarea>
 
 <!-- Save Lyrics -->
-<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded hover:brightness-125 transition text-lg mt-6">Save Lyrics</button>
+<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded text-lg mt-6">Save Lyrics</button>
 
 <script>
 const inputLine = document.getElementById('inputLine');
@@ -88,116 +109,75 @@ const beatUpload = document.getElementById('beatUpload');
 const beatPlayer = document.getElementById('beatPlayer');
 const beatDropArea = document.getElementById('beatDropArea');
 const beatPlayerBox = document.getElementById('beatPlayerBox');
-const rhymeDropdown = document.getElementById('rhymeDropdown');
+const rhymeContainer = document.getElementById('rhymeContainer');
 
-// --- Beat Upload & Drag-and-Drop ---
+let historyStack = [];
+
+// --- Beat Upload ---
 chooseBeatBtn.addEventListener('click', () => beatUpload.click());
 beatUpload.addEventListener('change', handleBeatFile);
-
-beatDropArea.addEventListener('dragover', e => {
-  e.preventDefault();
-  beatDropArea.classList.add('dragover');
-});
-beatDropArea.addEventListener('dragleave', () => {
-  beatDropArea.classList.remove('dragover');
-});
+beatDropArea.addEventListener('dragover', e => { e.preventDefault(); beatDropArea.classList.add('dragover'); });
+beatDropArea.addEventListener('dragleave', () => beatDropArea.classList.remove('dragover'));
 beatDropArea.addEventListener('drop', e => {
   e.preventDefault();
   beatDropArea.classList.remove('dragover');
-  if (e.dataTransfer.files.length) {
-    beatUpload.files = e.dataTransfer.files;
-    handleBeatFile();
-  }
+  if(e.dataTransfer.files.length){ beatUpload.files = e.dataTransfer.files; handleBeatFile(); }
 });
 
-function handleBeatFile() {
+function handleBeatFile(){
   const file = beatUpload.files[0];
   if(!file) return;
-  if(!file.type.startsWith('audio/')) {
-    alert('Please select a valid audio file.');
-    beatUpload.value = '';
-    return;
-  }
+  if(!file.type.startsWith('audio/')) { alert('Please select a valid audio file'); beatUpload.value = ''; return; }
   beatPlayer.src = URL.createObjectURL(file);
   beatPlayerBox.classList.remove('hidden');
 }
 
-// --- Generate Rhyme with dropdown ---
-async function generateRhyme() {
-  const line = inputLine.value.trim();
-  if (!line) return;
+// --- Append lyrics ---
+function appendLyrics(line){ historyStack.push(lyricsArea.value); lyricsArea.value += lyricsArea.value ? '\n' + line : line; lyricsArea.scrollTop = lyricsArea.scrollHeight; }
 
-  const words = line.split(' ');
-  const lastWord = words[words.length - 1];
+// --- Generate rhymes ---
+async function generateRhyme(){
+  const line = inputLine.value.trim();
+  if(!line) return;
+  const lastWord = line.split(' ').pop();
 
   try {
     const res = await fetch(`https://api.datamuse.com/words?rel_rhy=${lastWord}&max=5`);
     const data = await res.json();
+    rhymeContainer.innerHTML = '';
+    if(data.length === 0){ appendLyrics(`(No rhymes found for '${lastWord}')`); inputLine.value = ''; return; }
 
-    if (data.length === 0){
-      appendLyrics(`(No rhymes found for '${lastWord}')`);
-      inputLine.value = '';
-      rhymeDropdown.classList.add('hidden');
-      return;
-    }
-
-    // Populate dropdown
-    rhymeDropdown.innerHTML = '<option value="">Select a rhyme</option>';
     data.forEach(item => {
-      const opt = document.createElement('option');
-      opt.value = item.word;
-      opt.textContent = item.word;
-      rhymeDropdown.appendChild(opt);
+      const btn = document.createElement('button');
+      btn.className = 'rhyme-btn';
+      btn.textContent = item.word;
+      btn.addEventListener('click', ()=>{
+        const lines = lyricsArea.value.split('\n');
+        lines.pop();
+        lines.push(item.word);
+        lyricsArea.value = lines.join('\n');
+      });
+      rhymeContainer.appendChild(btn);
     });
-    rhymeDropdown.classList.remove('hidden');
 
     // Append first rhyme automatically
     appendLyrics(data[0].word);
-    inputLine.value = '';
+    inputLine.value='';
 
-  } catch(err){
-    console.error(err);
-    appendLyrics("(Error generating rhyme)");
-  }
-}
-
-// --- When dropdown selection changes ---
-rhymeDropdown.addEventListener('change', () => {
-  if (rhymeDropdown.value) {
-    const lines = lyricsArea.value.split('\n');
-    lines.pop(); // remove last line
-    lines.push(rhymeDropdown.value); // add selected rhyme
-    lyricsArea.value = lines.join('\n');
-    rhymeDropdown.selectedIndex = 0; // reset dropdown
-  }
-});
-
-// --- Append Lyrics with auto-scroll ---
-function appendLyrics(text) {
-  lyricsArea.value += lyricsArea.value ? `\n${text}` : text;
-  lyricsArea.scrollTop = lyricsArea.scrollHeight;
+  } catch(err){ console.error(err); appendLyrics('(Error generating rhyme)'); }
 }
 
 // --- Event Listeners ---
 generateBtn.addEventListener('click', generateRhyme);
-inputLine.addEventListener('keypress', e => { if(e.key === 'Enter') generateRhyme(); });
-
-undoBtn.addEventListener('click', () => {
-  const lines = lyricsArea.value.split('\n');
-  if(lines.length > 0){
-    lines.pop();
-    lyricsArea.value = lines.join('\n');
-  }
-});
-
-// --- Save Lyrics ---
-saveBtn.addEventListener('click', () => {
+inputLine.addEventListener('keypress', e => { if(e.key==='Enter') generateRhyme(); });
+undoBtn.addEventListener('click',()=>{ if(historyStack.length>0) lyricsArea.value=historyStack.pop(); });
+saveBtn.addEventListener('click',()=>{
   const text = lyricsArea.value;
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'lyrics.txt';
+  a.href=url;
+  a.download='lyrics.txt';
   a.click();
 });
 </script>
