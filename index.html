@@ -40,7 +40,6 @@ textarea, input {
   transition: all 0.2s ease-in-out;
 }
 
-/* SoundCloud-style Beat Drag Box */
 #beatDropArea {
   position: relative;
   display: flex;
@@ -73,7 +72,6 @@ textarea, input {
   transition: all 0.3s ease-in-out;
 }
 
-/* Rhyme buttons */
 .rhyme-btn {
   background-color: var(--neon-blue);
   color: #000;
@@ -110,7 +108,7 @@ textarea, input {
 <!-- Editable Lyrics Workspace -->
 <h2 class="text-2xl font-bold text-neon-blue mb-3 mt-4">Lyrics</h2>
 
-<!-- Input Section -->
+<!-- Input Section: Above Lyrics -->
 <div class="flex flex-col md:flex-row gap-4 mb-2 w-full max-w-3xl">
   <input id="inputLine" type="text" placeholder="Enter a word or phrase..."
     class="flex-1 p-3 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue placeholder-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg"/>
@@ -118,7 +116,7 @@ textarea, input {
   <button id="undoBtn" class="bg-gray-700 text-neon-blue px-6 py-3 rounded text-lg">Undo</button>
 </div>
 
-<!-- Rhyme Buttons -->
+<!-- Rhyme Buttons: Directly below Input -->
 <div id="rhymeContainer" class="flex flex-wrap gap-3 mb-4 w-full max-w-3xl"></div>
 
 <textarea id="lyricsArea"
@@ -190,7 +188,6 @@ async function generateRhyme() {
 
     if (data.length === 0) {
       appendLyrics(`(No rhymes found for '${lastWord}')`);
-      inputLine.value = '';
       rhymeContainer.innerHTML = '';
       return;
     }
@@ -212,7 +209,7 @@ async function generateRhyme() {
     });
 
     appendLyrics(data[0].word);
-    inputLine.value='';
+    // Keep the input box text intact
     rhymeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   } catch (err) {
@@ -270,11 +267,9 @@ function drawCombinedVisualizer() {
   const avgFreq = freqDataArray.reduce((a,b)=>a+b,0)/freqDataArray.length;
   const neonIntensity = Math.min(1, avgFreq / 200);
 
-  // Background pulse
   ctx.fillStyle = `rgba(0, 255, 255, ${0.05 + neonIntensity*0.15})`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Neon gradient for bars
   const neonGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   neonGradient.addColorStop(0, `rgba(0, 255, 255, ${neonIntensity})`);
   neonGradient.addColorStop(0.5, `rgba(0, 200, 255, 0.6)`);
@@ -292,7 +287,6 @@ function drawCombinedVisualizer() {
     x += barWidth + 1;
   }
 
-  // Draw scrolling waveform
   ctx.lineWidth = 2;
   ctx.strokeStyle = '#0ff';
   ctx.shadowColor = '#0ff';
