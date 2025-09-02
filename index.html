@@ -267,29 +267,25 @@ function drawCombinedVisualizer() {
   canvas.width = canvas.clientWidth;
   canvas.height = 150;
 
-  // Average frequency for neon intensity
   const avgFreq = freqDataArray.reduce((a,b)=>a+b,0)/freqDataArray.length;
   const neonIntensity = Math.min(1, avgFreq / 200);
-  const neonColor = `rgba(0, ${255 * neonIntensity}, 255, 1)`;
 
-  // Background pulse effect
-  const pulseAlpha = 0.08 + neonIntensity * 0.12;
-  ctx.fillStyle = `rgba(0, 255, 255, ${pulseAlpha})`;
+  // Background pulse
+  ctx.fillStyle = `rgba(0, 255, 255, ${0.05 + neonIntensity*0.15})`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Neon gradient for bars
   const neonGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  neonGradient.addColorStop(0, neonColor);
-  neonGradient.addColorStop(0.5, `rgba(0, ${150 * neonIntensity}, 255, 0.6)`);
-  neonGradient.addColorStop(1, `rgba(0, ${85 * neonIntensity}, 85, 0.2)`);
+  neonGradient.addColorStop(0, `rgba(0, 255, 255, ${neonIntensity})`);
+  neonGradient.addColorStop(0.5, `rgba(0, 200, 255, 0.6)`);
+  neonGradient.addColorStop(1, `rgba(0, 100, 255, 0.2)`);
 
-  // Draw pulsing bars
   const barWidth = (canvas.width / bufferLength) * 2;
   let x = 0;
   for (let i = 0; i < bufferLength; i++) {
     const barHeight = freqDataArray[i] * 0.8;
     ctx.fillStyle = neonGradient;
-    ctx.shadowColor = neonColor;
+    ctx.shadowColor = '#0ff';
     ctx.shadowBlur = 15;
     const pulseHeight = i < 5 ? barHeight * 1.5 : barHeight;
     ctx.fillRect(x, canvas.height - pulseHeight / 2, barWidth, pulseHeight / 2);
@@ -298,8 +294,8 @@ function drawCombinedVisualizer() {
 
   // Draw scrolling waveform
   ctx.lineWidth = 2;
-  ctx.strokeStyle = neonColor;
-  ctx.shadowColor = neonColor;
+  ctx.strokeStyle = '#0ff';
+  ctx.shadowColor = '#0ff';
   ctx.shadowBlur = 20;
   ctx.beginPath();
   const sliceWidth = canvas.width / bufferLength;
