@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Writer's Block Studio</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- jsPDF for PDF export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<!-- docx.js for DOCX export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.3.0/docx.min.js"></script>
 <style>
 :root {
   --neon-blue: #0ff;
@@ -125,18 +121,8 @@ textarea, input {
   class="w-full max-w-3xl h-64 p-4 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue focus:outline-none focus:ring-2 focus:ring-neon-blue text-lg resize-y"
   placeholder="Your lyrics go here..."></textarea>
 
-<!-- Export Format Selection -->
-<div class="flex gap-4 items-center mb-4">
-  <label for="exportFormat" class="text-neon-blue font-bold">Export as:</label>
-  <select id="exportFormat" class="p-2 rounded border-2 border-neon-blue bg-gray-800 text-neon-blue">
-    <option value="txt">.txt</option>
-    <option value="pdf">.pdf</option>
-    <option value="docx">.docx</option>
-  </select>
-</div>
-
 <!-- Save Lyrics -->
-<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded text-lg mt-2">Save Lyrics</button>
+<button id="saveBtn" class="bg-neon-blue text-black px-8 py-3 rounded text-lg mt-6">Save Lyrics</button>
 
 <script>
 const inputLine = document.getElementById('inputLine');
@@ -150,11 +136,10 @@ const beatPlayer = document.getElementById('beatPlayer');
 const beatDropArea = document.getElementById('beatDropArea');
 const beatPlayerBox = document.getElementById('beatPlayerBox');
 const rhymeContainer = document.getElementById('rhymeContainer');
-const exportFormat = document.getElementById('exportFormat');
 
 let historyStack = [];
 
-// --- Beat Upload ---
+// --- Beat Upload Drag & Drop ---
 chooseBeatBtn.addEventListener('click', () => beatUpload.click());
 beatUpload.addEventListener('change', handleBeatFile);
 beatDropArea.addEventListener('dragover', e => { e.preventDefault(); beatDropArea.classList.add('dragover'); });
@@ -178,7 +163,7 @@ function handleBeatFile(){
 // --- Append lyrics ---
 function appendLyrics(line){ historyStack.push(lyricsArea.value); lyricsArea.value += lyricsArea.value ? '\n' + line : line; lyricsArea.scrollTop = lyricsArea.scrollHeight; }
 
-// --- Shuffle ---
+// --- Shuffle helper ---
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -197,10 +182,16 @@ async function generateRhyme() {
   try {
     const res = await fetch(`https://api.datamuse.com/words?rel_rhy=${lastWord}&max=20`);
     let data = await res.json();
-    if (data.length === 0) { appendLyrics(`(No rhymes found for '${lastWord}')`); rhymeContainer.innerHTML = ''; return; }
+
+    if (data.length === 0) {
+      appendLyrics(`(No rhymes found for '${lastWord}')`);
+      rhymeContainer.innerHTML = '';
+      return;
+    }
 
     data = shuffleArray(data).slice(0, 10);
     rhymeContainer.innerHTML = '';
+
     data.forEach(item => {
       const btn = document.createElement('button');
       btn.className = 'rhyme-btn';
@@ -213,57 +204,49 @@ async function generateRhyme() {
       });
       rhymeContainer.appendChild(btn);
     });
+
     appendLyrics(data[0].word);
     rhymeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   } catch (err) {
     console.error(err);
     appendLyrics('(Error generating rhyme)');
   }
 }
 
-// --- Events ---
+// --- Event Listeners ---
 generateBtn.addEventListener('click', generateRhyme);
 inputLine.addEventListener('keypress', e => { if(e.key==='Enter') generateRhyme(); });
 undoBtn.addEventListener('click',()=>{ if(historyStack.length>0) lyricsArea.value=historyStack.pop(); });
 
-// --- Save with format selection ---
+// --- Save Lyrics with destination choice ---
 saveBtn.addEventListener('click', async () => {
   const text = lyricsArea.value;
-  const defaultFileName = 'lyrics';
-  const fileNameInput = prompt('Enter file name', defaultFileName) || defaultFileName;
-  const format = exportFormat.value;
+  const defaultFileName = 'lyrics.txt';
+  const fileName = prompt('Enter file name', defaultFileName) || defaultFileName;
 
-  if (format === 'txt') {
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: 'Text Files', accept: { 'text/plain': ['.txt'] } }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(text);
+      await writable.close();
+      alert('Lyrics saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Save cancelled or failed');
+    }
+  } else {
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fileNameInput}.txt`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
-  }
-
-  else if (format === 'pdf') {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const lines = doc.splitTextToSize(text, 180);
-    doc.text(lines, 10, 10);
-    doc.save(`${fileNameInput}.pdf`);
-  }
-
-  else if (format === 'docx') {
-    const doc = new window.docx.Document();
-    const paragraphs = text.split('\n').map(line => new window.docx.Paragraph(line));
-    doc.addSection({ children: paragraphs });
-    const packer = new window.docx.Packer();
-    packer.toBlob(doc).then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${fileNameInput}.docx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
   }
 });
 
@@ -299,41 +282,44 @@ function drawCombinedVisualizer() {
   canvas.width = canvas.clientWidth;
   canvas.height = 150;
 
-  const neonIntensity = Math.min(1, freqDataArray.reduce((a,b)=>a+b,0)/freqDataArray.length/200);
-  ctx.fillStyle = `rgba(0,255,255,${0.05+neonIntensity*0.15})`;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const avgFreq = freqDataArray.reduce((a,b)=>a+b,0)/freqDataArray.length;
+  const neonIntensity = Math.min(1, avgFreq / 200);
 
-  const neonGradient = ctx.createLinearGradient(0,0,0,canvas.height);
-  neonGradient.addColorStop(0, `rgba(0,255,255,${neonIntensity})`);
-  neonGradient.addColorStop(0.5, `rgba(0,200,255,0.6)`);
-  neonGradient.addColorStop(1, `rgba(0,100,255,0.2)`);
+  ctx.fillStyle = `rgba(0, 255, 255, ${0.05 + neonIntensity*0.15})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const barWidth = (canvas.width/bufferLength)*2;
-  let x=0;
-  for(let i=0;i<bufferLength;i++){
-    const barHeight=freqDataArray[i]*0.8;
-    ctx.fillStyle=neonGradient;
-    ctx.shadowColor='#0ff';
-    ctx.shadowBlur=15;
-    const pulseHeight=i<5?barHeight*1.5:barHeight;
-    ctx.fillRect(x,canvas.height-pulseHeight/2,barWidth,pulseHeight/2);
-    x+=barWidth+1;
+  const neonGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  neonGradient.addColorStop(0, `rgba(0, 255, 255, ${neonIntensity})`);
+  neonGradient.addColorStop(0.5, `rgba(0, 200, 255, 0.6)`);
+  neonGradient.addColorStop(1, `rgba(0, 100, 255, 0.2)`);
+
+  const barWidth = (canvas.width / bufferLength) * 2;
+  let x = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    const barHeight = freqDataArray[i] * 0.8;
+    ctx.fillStyle = neonGradient;
+    ctx.shadowColor = '#0ff';
+    ctx.shadowBlur = 15;
+    const pulseHeight = i < 5 ? barHeight * 1.5 : barHeight;
+    ctx.fillRect(x, canvas.height - pulseHeight / 2, barWidth, pulseHeight / 2);
+    x += barWidth + 1;
   }
 
-  ctx.lineWidth=2;
-  ctx.strokeStyle='#0ff';
-  ctx.shadowColor='#0ff';
-  ctx.shadowBlur=20;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#0ff';
+  ctx.shadowColor = '#0ff';
+  ctx.shadowBlur = 20;
   ctx.beginPath();
-  const sliceWidth=canvas.width/bufferLength;
-  let sx=0;
-  for(let i=0;i<bufferLength;i++){
-    const v=timeDataArray[i]/128.0;
-    const y=v*canvas.height/2;
-    if(i===0) ctx.moveTo(sx,y); else ctx.lineTo(sx,y);
-    sx+=sliceWidth;
+  const sliceWidth = canvas.width / bufferLength;
+  let sx = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    const v = timeDataArray[i] / 128.0;
+    const y = v * canvas.height / 2;
+    if (i === 0) ctx.moveTo(sx, y);
+    else ctx.lineTo(sx, y);
+    sx += sliceWidth;
   }
-  ctx.lineTo(canvas.width,canvas.height/2);
+  ctx.lineTo(canvas.width, canvas.height / 2);
   ctx.stroke();
 }
 </script>
